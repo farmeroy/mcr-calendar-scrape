@@ -13,6 +13,11 @@ struct HouseDates {
 
 #[tokio::main]
 async fn main() {
+    let dates = get_house_dates().await;
+    print!("{:?}", dates)
+}
+
+async fn get_house_dates() -> Vec<HouseDates> {
     let houses_response = get("https://www.mendocinovacations.com/houses");
     let html = houses_response.await.unwrap().text().await.unwrap();
     let data = Html::parse_document(&html);
@@ -111,7 +116,5 @@ async fn main() {
     }))
     .await;
 
-    for task in tasks {
-        println!("{:?}", task)
-    }
+    tasks
 }
