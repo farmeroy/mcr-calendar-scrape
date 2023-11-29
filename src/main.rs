@@ -1,10 +1,14 @@
+use std::net::SocketAddr;
+
+use axum::{debug_handler, http::StatusCode, routing::get, Json, Router};
 use chrono::NaiveDate;
 use futures::future;
 use regex::Regex;
-use reqwest::{self, get, Client};
+use reqwest::{self, Client};
 use scraper::{self, Html, Selector};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct HouseDates {
     house_name: String,
     check_ins: Vec<NaiveDate>,
@@ -13,12 +17,21 @@ struct HouseDates {
 
 #[tokio::main]
 async fn main() {
-    let dates = get_house_dates().await;
-    print!("{:?}", dates)
+    let app = router().await;
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
 
-async fn get_house_dates() -> Vec<HouseDates> {
-    let houses_response = get("https://www.mendocinovacations.com/houses");
+async fn router() -> Router {
+    Router::new().route("/", get(get_house_dates))
+}
+
+async fn get_house_links() -> Vec<String> {
+    let houses_response = reqwest::get("https://www.mendocinovacations.com/houses");
     let html = houses_response.await.unwrap().text().await.unwrap();
     let data = Html::parse_document(&html);
     let selector = Selector::parse("a").unwrap();
@@ -32,9 +45,14 @@ async fn get_house_dates() -> Vec<HouseDates> {
             }
         }
     }
+    links
+}
 
+#[debug_handler]
+async fn get_house_dates() -> Json<Vec<HouseDates>> {
     let client = Client::new();
-    let tasks = future::join_all(links.into_iter().map(|link| {
+    let links = get_house_links().await;
+    let houses = future::join_all(links.into_iter().map(|link| {
         let client = &client;
         async move {
             let link = format!("{link}/calendar");
@@ -109,12 +127,19 @@ async fn get_house_dates() -> Vec<HouseDates> {
             }
             HouseDates {
                 house_name: house_name.as_text().unwrap().text.to_string(),
-                check_ins: check_ins.clone(),
-                check_outs: check_outs.clone(),
+                check_ins,
+                check_outs,
             }
         }
     }))
     .await;
 
-    tasks
+    Json(houses)
+}
+
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
