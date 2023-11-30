@@ -1,7 +1,9 @@
 use std::net::SocketAddr;
 
-use axum::{debug_handler, http::StatusCode, routing::get, Json, Router};
-use chrono::NaiveDate;
+use askama::Template;
+
+use axum::{debug_handler, http::StatusCode, response, routing::get, Json, Router};
+use chrono::{Duration, Local, NaiveDate, NaiveDateTime};
 use futures::future;
 use regex::Regex;
 use reqwest::{self, Client};
@@ -31,32 +33,36 @@ async fn router() -> Router {
 }
 
 #[debug_handler]
-async fn get_house_dates() -> Json<Vec<HouseDates>> {
+async fn get_house_dates() -> impl response::IntoResponse {
     let links = scrape_house_links().await;
     let houses = scrape_house_dates(links).await;
-    Json(houses)
-}
+    let today = Local::now().date_naive();
+    let mut dates = Vec::new();
+    for i in 0..7 {
+        let next_day = today + Duration::days(i);
+        dates.push(next_day);
+    }
 
-async fn greet(extract::Path(name): extract::Path<String>) -> impl IntoResponse {
-    let template = IndexTemplate { name };
+    let template = IndexTemplate { houses, dates };
     HtmlTemplate(template)
 }
 
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate {
-    name: String,
+    houses: Vec<HouseDates>,
+    dates: Vec<NaiveDate>,
 }
 
 struct HtmlTemplate<T>(T);
 
-impl<T> IntoResponse for HtmlTemplate<T>
+impl<T> response::IntoResponse for HtmlTemplate<T>
 where
     T: Template,
 {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> response::Response {
         match self.0.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => response::Html(html).into_response(),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to render template. Error: {err}"),

@@ -9,5 +9,16 @@
   </head>
   <body>
 	<script src="index.js"></script>
+
+<ul>
+{% for house in houses %}
+  <li>{{ house.house_name|e }}</li>
+{% endfor %}
+</ul>
+<ul>
+{% for date in dates %}
+  <li>{{ date|e }}</li>
+{% endfor %}
+</ul>
   </body>
 </html>
