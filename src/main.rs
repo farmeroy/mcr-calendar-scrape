@@ -37,6 +37,35 @@ async fn get_house_dates() -> Json<Vec<HouseDates>> {
     Json(houses)
 }
 
+async fn greet(extract::Path(name): extract::Path<String>) -> impl IntoResponse {
+    let template = IndexTemplate { name };
+    HtmlTemplate(template)
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {
+    name: String,
+}
+
+struct HtmlTemplate<T>(T);
+
+impl<T> IntoResponse for HtmlTemplate<T>
+where
+    T: Template,
+{
+    fn into_response(self) -> Response {
+        match self.0.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to render template. Error: {err}"),
+            )
+                .into_response(),
+        }
+    }
+}
+
 async fn scrape_house_links() -> Vec<String> {
     let houses_response = reqwest::get("https://www.mendocinovacations.com/houses");
     let html = houses_response.await.unwrap().text().await.unwrap();
