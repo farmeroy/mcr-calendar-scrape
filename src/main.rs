@@ -17,6 +17,13 @@ struct HouseDates {
     check_outs: Vec<NaiveDate>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct DateTable {
+    date: NaiveDate,
+    check_ins: Vec<String>,
+    check_outs: Vec<String>,
+}
+
 #[tokio::main]
 async fn main() {
     let app = router().await;
@@ -42,16 +49,37 @@ async fn get_house_dates() -> impl response::IntoResponse {
         let next_day = today + Duration::days(i);
         dates.push(next_day);
     }
+    let date_table: Vec<DateTable> = dates
+        .iter()
+        .map(|&date| {
+            let check_ins: Vec<String> = houses
+                .iter()
+                .filter(|house| house.check_ins.contains(&date))
+                .map(|house| house.house_name.clone())
+                .collect();
 
-    let template = IndexTemplate { houses, dates };
+            let check_outs: Vec<String> = houses
+                .iter()
+                .filter(|house| house.check_outs.contains(&date))
+                .map(|house| house.house_name.clone())
+                .collect();
+
+            DateTable {
+                date,
+                check_ins,
+                check_outs,
+            }
+        })
+        .collect();
+
+    let template = IndexTemplate { date_table };
     HtmlTemplate(template)
 }
 
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate {
-    houses: Vec<HouseDates>,
-    dates: Vec<NaiveDate>,
+    date_table: Vec<DateTable>,
 }
 
 struct HtmlTemplate<T>(T);

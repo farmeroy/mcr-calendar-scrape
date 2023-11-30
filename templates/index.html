@@ -6,19 +6,56 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Mendocino Mess</title>
     <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-	<script src="index.js"></script>
+  <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
 
-<ul>
-{% for house in houses %}
-  <li>{{ house.house_name|e }}</li>
-{% endfor %}
-</ul>
-<ul>
-{% for date in dates %}
-  <li>{{ date|e }}</li>
-{% endfor %}
-</ul>
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+	<script src="index.js"></script>
+  </head>
+<body>
+    <h2>House Check-in/Check-out Table</h2>
+     <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for date in date_table %}
+                <tr>
+                    <td>{{ date.date }}</td>
+                    <td>
+                        {% for house in date.check_ins %}
+                        <ul>
+                          <li>{{ house }}</li>
+                        </ul>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for house in date.check_outs %}
+                        <ul>
+                          <li>{{ house }}</li>
+                        </ul>
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
   </body>
 </html>
