@@ -104,7 +104,8 @@ async fn scrape_house_dates(links: Vec<String>) -> Vec<HouseDates> {
                         date_regex.find(check_out_date_url.unwrap_or_default())
                     {
                         check_outs.push(
-                            NaiveDate::parse_from_str(check_out_date.as_str(), "%Y-%m-%d").unwrap(),
+                            NaiveDate::parse_from_str(check_out_date.as_str(), "%Y-%m-%d")
+                                .unwrap_or_default(),
                         );
                     } else {
                     }
