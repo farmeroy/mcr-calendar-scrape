@@ -30,7 +30,14 @@ async fn router() -> Router {
     Router::new().route("/", get(get_house_dates))
 }
 
-async fn get_house_links() -> Vec<String> {
+#[debug_handler]
+async fn get_house_dates() -> Json<Vec<HouseDates>> {
+    let links = scrape_house_links().await;
+    let houses = scrape_house_dates(links).await;
+    Json(houses)
+}
+
+async fn scrape_house_links() -> Vec<String> {
     let houses_response = reqwest::get("https://www.mendocinovacations.com/houses");
     let html = houses_response.await.unwrap().text().await.unwrap();
     let data = Html::parse_document(&html);
@@ -48,10 +55,8 @@ async fn get_house_links() -> Vec<String> {
     links
 }
 
-#[debug_handler]
-async fn get_house_dates() -> Json<Vec<HouseDates>> {
+async fn scrape_house_dates(links: Vec<String>) -> Vec<HouseDates> {
     let client = Client::new();
-    let links = get_house_links().await;
     let houses = future::join_all(links.into_iter().map(|link| {
         let client = &client;
         async move {
@@ -133,8 +138,7 @@ async fn get_house_dates() -> Json<Vec<HouseDates>> {
         }
     }))
     .await;
-
-    Json(houses)
+    houses
 }
 
 fn internal_error<E>(err: E) -> (StatusCode, String)
