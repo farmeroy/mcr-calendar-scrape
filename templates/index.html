@@ -37,7 +37,7 @@
         <tbody>
             {% for date in date_table %}
                 <tr>
-                    <td>{{ date.date }}</td>
+                  <td><div><p>{{date.day}}</p>{{ date.date }}</div></td>
                     <td>
                         {% for house in date.check_ins %}
                         <ul>

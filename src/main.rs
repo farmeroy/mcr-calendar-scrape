@@ -1,9 +1,7 @@
-use std::net::SocketAddr;
-
 use askama::Template;
 
-use axum::{debug_handler, http::StatusCode, response, routing::get, Json, Router};
-use chrono::{Duration, Local, NaiveDate, NaiveDateTime};
+use axum::{debug_handler, http::StatusCode, response, routing::get, Router};
+use chrono::{Datelike, Duration, Local, NaiveDate, Weekday};
 use futures::future;
 use regex::Regex;
 use reqwest::{self, Client};
@@ -20,6 +18,7 @@ struct HouseDates {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct DateTable {
     date: NaiveDate,
+    day: Weekday,
     check_ins: Vec<String>,
     check_outs: Vec<String>,
 }
@@ -40,7 +39,7 @@ async fn get_house_dates() -> impl response::IntoResponse {
     let houses = scrape_house_dates(links).await;
     let today = Local::now().date_naive();
     let mut dates = Vec::new();
-    for i in 0..7 {
+    for i in 0..14 {
         let next_day = today + Duration::days(i);
         dates.push(next_day);
     }
@@ -61,6 +60,7 @@ async fn get_house_dates() -> impl response::IntoResponse {
 
             DateTable {
                 date,
+                day: date.to_owned().weekday(),
                 check_ins,
                 check_outs,
             }
@@ -198,11 +198,4 @@ async fn scrape_house_dates(links: Vec<String>) -> Vec<HouseDates> {
     }))
     .await;
     houses
-}
-
-fn internal_error<E>(err: E) -> (StatusCode, String)
-where
-    E: std::error::Error,
-{
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
